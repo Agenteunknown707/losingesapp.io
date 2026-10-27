@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Los Inges - Control de Ventas, Gastos y Precios</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .touch-active:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen pb-20 select-none">
+
+    <!-- Container Principal Mobile -->
+    <div class="max-w-[480px] mx-auto bg-stone-950 min-h-screen relative shadow-2xl overflow-x-hidden flex flex-col">
+
+        <!-- Header Fijo -->
+        <header class="bg-gradient-to-r from-stone-900 via-stone-800 to-amber-950 px-4 py-3 border-b border-amber-500/20 sticky top-0 z-30 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-stone-950 font-black text-lg shadow-lg">
+                    <i class="fa-solid fa-fire"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-stone-100 text-base leading-tight">LOS INGES</h1>
+                    <p class="text-[10px] text-amber-400 font-medium">Dogos & Hamburguesas</p>
+                </div>
+            </div>
+            <div class="text-right flex flex-col items-end">
+                <span id="currentWeekTag" class="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-semibold">Semana 1</span>
+                <button onclick="resetWeekModal()" class="text-[10px] text-stone-400 underline hover:text-red-400 mt-1">Reiniciar Semana</button>
+            </div>
+        </header>
+
+        <!-- PESTAÑA 1: PUNTO DE VENTA (VENTAS / POS) -->
+        <section id="tab-pos" class="p-3 flex-1 space-y-3">
+            <!-- Filtros de Categorías -->
+            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+                <button onclick="filterCategory('todos')" class="cat-btn bg-amber-500 text-stone-950 font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow">🔥 Todos</button>
+                <button onclick="filterCategory('dogos')" class="cat-btn bg-stone-800 text-stone-300 px-3 py-1.5 rounded-xl whitespace-nowrap border border-stone-700">🌭 Dogos</button>
+                <button onclick="filterCategory('burgers')" class="cat-btn bg-stone-800 text-stone-300 px-3 py-1.5 rounded-xl whitespace-nowrap border border-stone-700">🍔 Hamburguesas</button>
+            </div>
+
+            <!-- Grid de Productos -->
+            <div id="productsGrid" class="grid grid-cols-2 gap-2.5">
+                <!-- Se llena dinámicamente con JS -->
+            </div>
+        </section>
+
+        <!-- PESTAÑA 2: GASTOS DE LA SEMANA -->
+        <section id="tab-gastos" class="p-3 flex-1 space-y-3 hidden">
+            <div class="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl space-y-3">
+                <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-cart-plus"></i> Registrar Nuevo Gasto Real
+                </h2>
+                <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-2.5">
+                    <div>
+                        <label class="text-[11px] text-stone-400 block mb-1">Concepto o Insumo</label>
+                        <input type="text" id="expConcept" placeholder="Ej: Pan para dogo, Tocino, Gas" required class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-stone-400 block mb-1">Monto ($)</label>
+                            <input type="number" step="0.01" id="expAmount" placeholder="0.00" required class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-stone-400 block mb-1">Categoría</label>
+                            <select id="expCategory" class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                                <option value="Insumos">Carnes / Salchichas</option>
+                                <option value="Panadería">Panadería</option>
+                                <option value="Cremería">Cremería / Quesos</option>
+                                <option value="Verdura">Verdura / Abarrotes</option>
+                                <option value="Gas / Luz">Gas / Combustible</option>
+                                <option value="Empaques">Desechables</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs py-2.5 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> Guardar Gasto
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lista de Gastos -->
+            <div class="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl space-y-2">
+                <h3 class="text-xs font-bold text-stone-300 flex justify-between items-center">
+                    <span>Gastos de la Semana</span>
+                    <span id="expensesCountTag" class="text-[10px] text-stone-500">0 compras</span>
+                </h3>
+                <div id="expensesList" class="space-y-1.5 max-h-[300px] overflow-y-auto">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 3: NOTAS DE PRECIOS Y COTIZACIONES -->
+        <section id="tab-precios" class="p-3 flex-1 space-y-3 hidden">
+            <!-- Formulario para agregar o editar cotizaciones -->
+            <div class="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-clipboard-list"></i> Anotar Precio / Cotización
+                    </h2>
+                    <button id="btnCancelNoteEdit" onclick="cancelNoteEdit()" class="hidden text-[10px] text-stone-400 hover:text-white underline">Cancelar edición</button>
+                </div>
+                
+                <form id="priceNoteForm" onsubmit="savePriceNote(event)" class="space-y-2.5">
+                    <input type="hidden" id="noteEditId" value="">
+                    <div>
+                        <label class="text-[11px] text-stone-400 block mb-1">Insumo o Producto</label>
+                        <input type="text" id="noteItem" placeholder="Ej: Queso Asadero 1kg, Paquete Pan 12pza" required class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[11px] text-stone-400 block mb-1">Lugar / Proveedor</label>
+                            <input type="text" id="noteStore" placeholder="Ej: Sam's, Carnicería Pepe" required class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-stone-400 block mb-1">Precio ($)</label>
+                            <input type="number" step="0.01" id="notePrice" placeholder="0.00" required class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-stone-400 block mb-1">Presentación / Cantidad</label>
+                        <input type="text" id="noteUnit" placeholder="Ej: Kilo, Caja 50 pzas, Paquete" class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-stone-400 block mb-1">Observaciones / Notas (Opcional)</label>
+                        <input type="text" id="noteObs" placeholder="Ej: Buena calidad, Sube los fines de semana" class="w-full bg-stone-950 border border-stone-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <button type="submit" id="btnSaveNote" class="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs py-2.5 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Nota de Precio
+                    </button>
+                </form>
+            </div>
+
+            <!-- Buscador y Lista de Notas -->
+            <div class="space-y-2">
+                <div class="relative">
+                    <input type="text" id="searchPriceNote" onkeyup="renderPriceNotes()" placeholder="Buscar insumo o tienda..." class="w-full bg-stone-900 border border-stone-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-stone-500 text-xs"></i>
+                </div>
+
+                <div id="priceNotesList" class="space-y-2">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 4: DASHBOARD & UTILIDAD SEMANAL -->
+        <section id="tab-dashboard" class="p-3 flex-1 space-y-3 hidden">
+            <!-- Tarjetas Resumen -->
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-stone-900 border border-stone-800 p-2.5 rounded-2xl text-center">
+                    <span class="text-[10px] text-stone-400 block font-medium">Ventas</span>
+                    <span id="totalSalesVal" class="text-xs font-black text-emerald-400">$0.00</span>
+                </div>
+                <div class="bg-stone-900 border border-stone-800 p-2.5 rounded-2xl text-center">
+                    <span class="text-[10px] text-stone-400 block font-medium">Gastos</span>
+                    <span id="totalExpensesVal" class="text-xs font-black text-red-400">$0.00</span>
+                </div>
+                <div class="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-2xl text-center">
+                    <span class="text-[10px] text-amber-400 block font-bold">Utilidad</span>
+                    <span id="netProfitVal" class="text-xs font-black text-amber-400">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Gráfico Financiero -->
+            <div class="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl space-y-2">
+                <h3 class="text-xs font-bold text-stone-300">Balance Semanal</h3>
+                <div class="w-full h-44 flex items-center justify-center">
+                    <canvas id="financialChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Historial de Ventas Semanales -->
+            <div class="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl space-y-2">
+                <h3 class="text-xs font-bold text-stone-300 flex justify-between items-center">
+                    <span>Historial de Ventas</span>
+                    <span id="salesCountTag" class="text-[10px] text-stone-500">0 ventas</span>
+                </h3>
+                <div id="salesHistoryList" class="space-y-1.5 max-h-[200px] overflow-y-auto text-xs">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- BARRA DE CARRITO FLOTANTE (Solo en POS) -->
+        <div id="cartStickyBar" class="fixed bottom-14 left-0 right-0 max-w-[480px] mx-auto px-3 z-20 hidden">
+            <button onclick="openCartModal()" class="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-black py-3 px-4 rounded-2xl shadow-2xl flex justify-between items-center touch-active">
+                <div class="flex items-center gap-2">
+                    <span id="cartTotalCount" class="bg-stone-950 text-amber-400 w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold">0</span>
+                    <span class="text-xs uppercase tracking-wider">Ver Orden / Ticket</span>
+                </div>
+                <span id="cartTotalPrice" class="text-base font-extrabold">$0.00</span>
+            </button>
+        </div>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-stone-900 border-t border-stone-800 z-30 px-2 py-2 grid grid-cols-4 gap-1">
+            <button onclick="switchTab('tab-pos')" id="nav-tab-pos" class="nav-item flex flex-col items-center justify-center text-amber-400 font-bold py-1">
+                <i class="fa-solid fa-cash-register text-base mb-0.5"></i>
+                <span class="text-[10px]">Ventas</span>
+            </button>
+            <button onclick="switchTab('tab-gastos')" id="nav-tab-gastos" class="nav-item flex flex-col items-center justify-center text-stone-400 font-semibold py-1">
+                <i class="fa-solid fa-receipt text-base mb-0.5"></i>
+                <span class="text-[10px]">Gastos</span>
+            </button>
+            <button onclick="switchTab('tab-precios')" id="nav-tab-precios" class="nav-item flex flex-col items-center justify-center text-stone-400 font-semibold py-1">
+                <i class="fa-solid fa-book-bookmark text-base mb-0.5"></i>
+                <span class="text-[10px]">Notas Precios</span>
+            </button>
+            <button onclick="switchTab('tab-dashboard')" id="nav-tab-dashboard" class="nav-item flex flex-col items-center justify-center text-stone-400 font-semibold py-1">
+                <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+                <span class="text-[10px]">Utilidad</span>
+            </button>
+        </nav>
+
+        <!-- MODAL DEL CARRITO Y COBRO -->
+        <div id="cartModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end justify-center hidden">
+            <div class="bg-stone-900 border-t border-stone-800 rounded-t-3xl w-full max-w-[480px] p-4 space-y-4 max-h-[85vh] flex flex-col">
+                <div class="flex justify-between items-center border-b border-stone-800 pb-2">
+                    <h3 class="font-bold text-stone-100 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping text-amber-500"></i> Orden Actual
+                    </h3>
+                    <button onclick="closeCartModal()" class="text-stone-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <div id="cartItemsList" class="flex-1 overflow-y-auto space-y-2 py-1">
+                    <!-- Dinámico -->
+                </div>
+
+                <!-- Método de Pago y Cambio -->
+                <div class="bg-stone-950 p-3 rounded-2xl border border-stone-800 space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-stone-400">Método de Pago:</span>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-1 text-stone-200 cursor-pointer">
+                                <input type="radio" name="payMethod" value="Efectivo" checked onchange="toggleCashInput()" class="accent-amber-500"> Efectivo
+                            </label>
+                            <label class="flex items-center gap-1 text-stone-200 cursor-pointer">
+                                <input type="radio" name="payMethod" value="Transferencia" onchange="toggleCashInput()" class="accent-amber-500"> Transferencia
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="cashInputContainer" class="flex items-center gap-2 pt-1">
+                        <span class="text-xs text-stone-400">Paga con: $</span>
+                        <input type="number" id="cashGiven" oninput="calculateChange()" placeholder="0.00" class="flex-1 bg-stone-900 border border-stone-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                        <span class="text-xs text-stone-400">Cambio: <strong id="changeVal" class="text-amber-400">$0.00</strong></span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button onclick="clearCart()" class="bg-stone-800 text-stone-400 font-bold text-xs py-3 px-4 rounded-xl hover:text-white">Limpiar</button>
+                    <button onclick="completeSale()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-receipt"></i> Cobrar y Generar Ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE TICKET VIRTUAL -->
+        <div id="ticketModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white text-stone-900 rounded-3xl w-full max-w-[360px] p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <button onclick="closeTicketModal()" class="absolute top-3 right-3 text-stone-400 hover:text-stone-900"><i class="fa-solid fa-xmark text-lg"></i></button>
+
+                <div class="text-center border-b border-dashed border-stone-300 pb-3">
+                    <h2 class="font-black text-lg text-stone-900">LOS INGES</h2>
+                    <p class="text-[11px] text-stone-500 font-medium">Dogos & Hamburguesas</p>
+                    <p id="ticketDate" class="text-[10px] text-stone-400 mt-1"></p>
+                </div>
+
+                <div id="ticketItems" class="space-y-1.5 text-xs border-b border-dashed border-stone-300 pb-3">
+                    <!-- Detalle ticket -->
+                </div>
+
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between font-extrabold text-sm">
+                        <span>TOTAL:</span>
+                        <span id="ticketTotal">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-stone-500">
+                        <span>Método:</span>
+                        <span id="ticketMethod">Efectivo</span>
+                    </div>
+                    <div id="ticketChangeRow" class="flex justify-between text-[11px] text-stone-500">
+                        <span>Cambio:</span>
+                        <span id="ticketChange">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2 space-y-2">
+                    <p class="text-[10px] text-stone-400 italic">¡Gracias por su compra en Los Inges!</p>
+                    <button onclick="copyTicketToClipboard()" class="w-full bg-stone-900 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2">
+                        <i class="fa-regular fa-copy"></i> Copiar Ticket (WhatsApp)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LÓGICA PRINCIPAL -->
+    <script>
+        // --- BASE DE DATOS Y MENÚ PRECONFIGURADO ---
+        const PRECONFIGURED_PRODUCTS = [
+            { id: 'dogo_sencillo', name: 'Dogo Sencillo', price: 30, cat: 'dogos', icon: 'fa-hotdog', desc: 'Dogo tradicional' },
+            { id: 'dogo_guisado', name: 'Dogo c/ Guisado', price: 35, cat: 'dogos', icon: 'fa-hotdog', desc: 'Con guisado casero' },
+            { id: 'dogo_orden_3', name: 'Orden 3 Dogos Sencillos', price: 75, cat: 'dogos', icon: 'fa-layer-group', desc: 'Paquete de 3 dogos' },
+            { id: 'dogo_orden_3_guisado', name: 'Orden 3 Dogos c/ Guisado', price: 90, cat: 'dogos', icon: 'fa-layer-group', desc: 'Paquete 3 dogos con guisado' },
+            { id: 'burger_sencilla', name: 'Hamburguesa Sencilla', price: 60, cat: 'burgers', icon: 'fa-burger', desc: 'Carne jugosa tradicional' },
+            { id: 'burger_papas', name: 'Hamburguesa c/ Papas', price: 80, cat: 'burgers', icon: 'fa-burger', desc: 'Incluye papas a la francesa' },
+            { id: 'burger_salchicha', name: 'Hamburguesa c/ Salchicha', price: 100, cat: 'burgers', icon: 'fa-burger', desc: 'Con salchicha asada' },
+            { id: 'burger_especial', name: 'Hamburguesa Especial', price: 110, cat: 'burgers', icon: 'fa-crown', desc: 'Aderezo de casa + salchicha' }
+        ];
+
+        // Estado Global
+        let appData = {
+            currentWeek: 1,
+            cart: [],
+            sales: [],
+            expenses: [],
+            priceNotes: [
+                { id: 'pn1', item: 'Pan para Dogos (12 pzas)', store: "Sam's Club", price: 52.00, unit: 'Paquete', obs: 'Excelente tamaño y textura' },
+                { id: 'pn2', item: 'Tocino Ahumado 1kg', store: "Carnicería San José", price: 165.00, unit: 'Kilo', obs: 'Corte grueso de primera' }
+            ]
+        };
+
+        let financialChartInstance = null;
+        let lastCompletedSale = null;
+
+        // --- INICIALIZACIÓN ---
+        window.onload = function() {
+            loadFromLocalStorage();
+            renderProductsGrid('todos');
+            updateCartBar();
+            renderExpenses();
+            renderPriceNotes();
+            renderDashboard();
+            initChart();
+        };
+
+        // --- PERSISTENCIA LOCALSTORAGE ---
+        function saveToLocalStorage() {
+            localStorage.setItem('los_inges_data_v2', JSON.stringify(appData));
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('los_inges_data_v2');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                    if (!appData.priceNotes) appData.priceNotes = [];
+                    if (!appData.expenses) appData.expenses = [];
+                    if (!appData.sales) appData.sales = [];
+                    const weekTag = document.getElementById('currentWeekTag');
+                    if (weekTag) weekTag.innerText = `Semana ${appData.currentWeek || 1}`;
+                } catch(e) {
+                    console.error('Error cargando localStorage:', e);
+                }
+            }
+        }
+
+        // --- NAVEGACIÓN ---
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section, body > div > section').forEach(sec => sec.classList.add('hidden'));
+            const targetSection = document.getElementById(tabId);
+            if (targetSection) targetSection.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('text-amber-400', 'font-bold');
+                btn.classList.add('text-stone-400', 'font-semibold');
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-stone-400', 'font-semibold');
+                activeBtn.classList.add('text-amber-400', 'font-bold');
+            }
+
+            const cartBar = document.getElementById('cartStickyBar');
+            if (cartBar) {
+                if (tabId === 'tab-pos' && appData.cart.length > 0) {
+                    cartBar.classList.remove('hidden');
+                } else {
+                    cartBar.classList.add('hidden');
+                }
+            }
+
+            if (tabId === 'tab-dashboard') {
+                renderDashboard();
+            }
+        }
+
+        // --- POS / PRODUCTOS ---
+        function renderProductsGrid(category = 'todos') {
+            const grid = document.getElementById('productsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const filtered = category === 'todos' 
+                ? PRECONFIGURED_PRODUCTS 
+                : PRECONFIGURED_PRODUCTS.filter(p => p.cat === category);
+
+            filtered.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-stone-900 border border-stone-800 p-3 rounded-2xl flex flex-col justify-between hover:border-amber-500/50 transition-all cursor-pointer active:scale-95 touch-active";
+                card.onclick = () => addToCart(p);
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs">
+                                <i class="fa-solid ${p.icon}"></i>
+                            </span>
+                            <span class="font-extrabold text-amber-400 text-sm">$${p.price}</span>
+                        </div>
+                        <h3 class="font-bold text-stone-100 text-xs leading-snug pt-1">${p.name}</h3>
+                        <p class="text-[10px] text-stone-400 leading-tight">${p.desc}</p>
+                    </div>
+                    <button class="mt-3 w-full bg-stone-800 hover:bg-amber-500 hover:text-stone-950 text-amber-400 font-bold text-[11px] py-1.5 rounded-xl transition-colors flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-plus text-[9px]"></i> Agregar
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterCategory(cat) {
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('bg-amber-500', 'text-stone-950', 'font-bold');
+                b.classList.add('bg-stone-800', 'text-stone-300');
+            });
+            event.target.classList.remove('bg-stone-800', 'text-stone-300');
+            event.target.classList.add('bg-amber-500', 'text-stone-950', 'font-bold');
+            renderProductsGrid(cat);
+        }
+
+        // --- CARRITO DE COMPRAS ---
+        function addToCart(product) {
+            const existing = appData.cart.find(item => item.id === product.id);
+            if (existing) {
+                existing.qty++;
+            } else {
+                appData.cart.push({ ...product, qty: 1 });
+            }
+            updateCartBar();
+        }
+
+        function updateCartBar() {
+            const totalQty = appData.cart.reduce((sum, item) => sum + item.qty, 0);
+            const totalPrice = appData.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            const cartBar = document.getElementById('cartStickyBar');
+            const cartCount = document.getElementById('cartTotalCount');
+            const cartPrice = document.getElementById('cartTotalPrice');
+
+            if (cartCount) cartCount.innerText = totalQty;
+            if (cartPrice) cartPrice.innerText = `$${totalPrice.toFixed(2)}`;
+
+            if (cartBar) {
+                const activeTab = document.querySelector('.nav-item.text-amber-400')?.id;
+                if (totalQty > 0 && activeTab === 'nav-tab-pos') {
+                    cartBar.classList.remove('hidden');
+                } else {
+                    cartBar.classList.add('hidden');
+                }
+            }
+        }
+
+        function openCartModal() {
+            renderCartItems();
+            calculateChange();
+            document.getElementById('cartModal').classList.remove('hidden');
+        }
+
+        function closeCartModal() {
+            document.getElementById('cartModal').classList.add('hidden');
+        }
+
+        function renderCartItems() {
+            const list = document.getElementById('cartItemsList');
+            if (!list) return;
+            list.innerHTML = '';
+
+            appData.cart.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center bg-stone-950 p-2.5 rounded-xl border border-stone-800 text-xs";
+                row.innerHTML = `
+                    <div class="flex-1">
+                        <span class="font-bold text-stone-100 block">${item.name}</span>
+                        <span class="text-[10px] text-amber-400">$${item.price} c/u</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeQty(${idx}, -1)" class="w-6 h-6 rounded-lg bg-stone-800 text-stone-300 font-bold flex items-center justify-center">-</button>
+                        <span class="font-extrabold text-stone-100 text-xs w-4 text-center">${item.qty}</span>
+                        <button onclick="changeQty(${idx}, 1)" class="w-6 h-6 rounded-lg bg-stone-800 text-stone-300 font-bold flex items-center justify-center">+</button>
+                        <span class="font-extrabold text-amber-400 text-xs w-12 text-right">$${(item.price * item.qty).toFixed(2)}</span>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function changeQty(index, delta) {
+            appData.cart[index].qty += delta;
+            if (appData.cart[index].qty <= 0) {
+                appData.cart.splice(index, 1);
+            }
+            updateCartBar();
+            renderCartItems();
+            calculateChange();
+            if (appData.cart.length === 0) {
+                closeCartModal();
+            }
+        }
+
+        function clearCart() {
+            appData.cart = [];
+            updateCartBar();
+            closeCartModal();
+        }
+
+        function toggleCashInput() {
+            const method = document.querySelector('input[name="payMethod"]:checked').value;
+            const container = document.getElementById('cashInputContainer');
+            if (method === 'Transferencia') {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+            }
+        }
+
+        function calculateChange() {
+            const totalPrice = appData.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const cashInput = parseFloat(document.getElementById('cashGiven').value) || 0;
+            const changeVal = document.getElementById('changeVal');
+            
+            const change = cashInput - totalPrice;
+            if (changeVal) {
+                changeVal.innerText = `$${(change > 0 ? change : 0).toFixed(2)}`;
+            }
+        }
+
+        function completeSale() {
+            if (appData.cart.length === 0) return;
+
+            const total = appData.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const method = document.querySelector('input[name="payMethod"]:checked').value;
+            const cashGiven = parseFloat(document.getElementById('cashGiven').value) || total;
+            const change = method === 'Efectivo' ? Math.max(0, cashGiven - total) : 0;
+
+            const sale = {
+                id: 'V-' + Date.now().toString().slice(-6),
+                date: new Date().toLocaleDateString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
+                items: [...appData.cart],
+                total: total,
+                method: method,
+                cashGiven: cashGiven,
+                change: change
+            };
+
+            appData.sales.unshift(sale);
+            lastCompletedSale = sale;
+
+            saveToLocalStorage();
+            clearCart();
+            renderDashboard();
+            showTicketModal(sale);
+        }
+
+        // --- TICKET VIRTUAL ---
+        function showTicketModal(sale) {
+            document.getElementById('ticketDate').innerText = sale.date;
+            document.getElementById('ticketTotal').innerText = `$${sale.total.toFixed(2)}`;
+            document.getElementById('ticketMethod').innerText = sale.method;
+            document.getElementById('ticketChange').innerText = `$${sale.change.toFixed(2)}`;
+
+            const itemsContainer = document.getElementById('ticketItems');
+            itemsContainer.innerHTML = '';
+
+            sale.items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between";
+                row.innerHTML = `
+                    <span>${item.qty}x ${item.name}</span>
+                    <span class="font-bold">$${(item.price * item.qty).toFixed(2)}</span>
+                `;
+                itemsContainer.appendChild(row);
+            });
+
+            document.getElementById('ticketModal').classList.remove('hidden');
+        }
+
+        function closeTicketModal() {
+            document.getElementById('ticketModal').classList.add('hidden');
+        }
+
+        function copyTicketToClipboard() {
+            if (!lastCompletedSale) return;
+
+            let text = `--- LOS INGES ---\nFecha: ${lastCompletedSale.date}\n\n`;
+            lastCompletedSale.items.forEach(i => {
+                text += `${i.qty}x ${i.name} - $${(i.price * i.qty).toFixed(2)}\n`;
+            });
+            text += `\nTOTAL: $${lastCompletedSale.total.toFixed(2)}\nPago: ${lastCompletedSale.method}\n`;
+            if (lastCompletedSale.method === 'Efectivo') {
+                text += `Cambio: $${lastCompletedSale.change.toFixed(2)}\n`;
+            }
+            text += `\n¡Gracias por su compra! 🌭🍔`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('¡Ticket copiado al portapapeles para enviar por WhatsApp!');
+            }).catch(err => {
+                console.error('Error al copiar', err);
+            });
+        }
+
+        // --- GASTOS ---
+        function addExpense(e) {
+            e.preventDefault();
+            const concept = document.getElementById('expConcept').value.trim();
+            const amount = parseFloat(document.getElementById('expAmount').value);
+            const category = document.getElementById('expCategory').value;
+
+            if (!concept || isNaN(amount)) return;
+
+            const newExp = {
+                id: 'G-' + Date.now().toString().slice(-5),
+                concept,
+                amount,
+                category,
+                date: new Date().toLocaleDateString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+            };
+
+            appData.expenses.unshift(newExp);
+            saveToLocalStorage();
+            renderExpenses();
+            renderDashboard();
+
+            document.getElementById('expenseForm').reset();
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expensesList');
+            const tag = document.getElementById('expensesCountTag');
+            if (!list) return;
+            list.innerHTML = '';
+
+            if (tag) tag.innerText = `${appData.expenses.length} compras`;
+
+            if (appData.expenses.length === 0) {
+                list.innerHTML = `<p class="text-stone-500 text-xs text-center py-4">No hay gastos registrados esta semana.</p>`;
+                return;
+            }
+
+            appData.expenses.forEach(e => {
+                const item = document.createElement('div');
+                item.className = "bg-stone-950 p-2.5 rounded-xl border border-stone-800 flex justify-between items-center text-xs";
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-stone-200 block">${e.concept}</span>
+                        <span class="text-[10px] text-stone-500">${e.category} • ${e.date || ''}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-red-400">-$${parseFloat(e.amount).toFixed(2)}</span>
+                        <button onclick="deleteExpense('${e.id}')" class="text-stone-500 hover:text-red-400 text-[11px]"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function deleteExpense(id) {
+            appData.expenses = appData.expenses.filter(e => e.id !== id);
+            saveToLocalStorage();
+            renderExpenses();
+            renderDashboard();
+        }
+
+        // --- NOTAS DE PRECIOS Y COTIZACIONES ---
+        function savePriceNote(e) {
+            e.preventDefault();
+            const editId = document.getElementById('noteEditId').value;
+            const item = document.getElementById('noteItem').value.trim();
+            const store = document.getElementById('noteStore').value.trim();
+            const price = parseFloat(document.getElementById('notePrice').value);
+            const unit = document.getElementById('noteUnit').value.trim() || 'General';
+            const obs = document.getElementById('noteObs').value.trim() || '';
+
+            if (!item || !store || isNaN(price)) return;
+
+            if (editId) {
+                const note = appData.priceNotes.find(n => n.id === editId);
+                if (note) {
+                    note.item = item;
+                    note.store = store;
+                    note.price = price;
+                    note.unit = unit;
+                    note.obs = obs;
+                }
+            } else {
+                appData.priceNotes.unshift({
+                    id: 'pn_' + Date.now(),
+                    item, store, price, unit, obs
+                });
+            }
+
+            saveToLocalStorage();
+            renderPriceNotes();
+            cancelNoteEdit();
+        }
+
+        function renderPriceNotes() {
+            const list = document.getElementById('priceNotesList');
+            if (!list) return;
+
+            const searchInput = document.getElementById('searchPriceNote');
+            const search = searchInput ? (searchInput.value || '').toLowerCase() : '';
+            list.innerHTML = '';
+
+            const filtered = (appData.priceNotes || []).filter(n => 
+                n.item.toLowerCase().includes(search) || 
+                n.store.toLowerCase().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<p class="text-stone-500 text-xs text-center py-4">No hay notas de precios guardadas.</p>`;
+                return;
+            }
+
+            filtered.forEach(n => {
+                const card = document.createElement('div');
+                card.className = "bg-stone-900 p-3 rounded-xl border border-stone-800 text-xs space-y-2";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start border-b border-stone-800 pb-1.5">
+                        <div>
+                            <span class="font-extrabold text-stone-100 text-xs block">${n.item}</span>
+                            <span class="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">${n.store}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-black text-amber-400 block">$${parseFloat(n.price).toFixed(2)}</span>
+                            <span class="text-[9px] text-stone-400">${n.unit}</span>
+                        </div>
+                    </div>
+
+                    ${n.obs ? `<p class="text-[10px] text-stone-400 bg-stone-950 p-1.5 rounded border border-stone-800"><i class="fa-regular fa-comment-dots text-amber-500 mr-1"></i>${n.obs}</p>` : ''}
+
+                    <div class="flex justify-between items-center pt-1">
+                        <button onclick="convertToExpense('${n.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg flex items-center gap-1 touch-active shadow-sm">
+                            <i class="fa-solid fa-cart-plus"></i> Convertir en Gasto Real
+                        </button>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="editPriceNote('${n.id}')" class="text-stone-400 hover:text-stone-200 text-[11px]"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deletePriceNote('${n.id}')" class="text-stone-500 hover:text-red-400 text-[11px]"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function editPriceNote(id) {
+            const note = appData.priceNotes.find(n => n.id === id);
+            if (!note) return;
+
+            document.getElementById('noteEditId').value = note.id;
+            document.getElementById('noteItem').value = note.item;
+            document.getElementById('noteStore').value = note.store;
+            document.getElementById('notePrice').value = note.price;
+            document.getElementById('noteUnit').value = note.unit;
+            document.getElementById('noteObs').value = note.obs;
+
+            document.getElementById('btnSaveNote').innerHTML = `<i class="fa-solid fa-pen"></i> Actualizar Nota`;
+            document.getElementById('btnCancelNoteEdit').classList.remove('hidden');
+        }
+
+        function cancelNoteEdit() {
+            document.getElementById('noteEditId').value = '';
+            document.getElementById('priceNoteForm').reset();
+            document.getElementById('btnSaveNote').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Guardar Nota de Precio`;
+            document.getElementById('btnCancelNoteEdit').classList.add('hidden');
+        }
+
+        function deletePriceNote(id) {
+            appData.priceNotes = appData.priceNotes.filter(n => n.id !== id);
+            saveToLocalStorage();
+            renderPriceNotes();
+        }
+
+        function convertToExpense(noteId) {
+            const note = appData.priceNotes.find(n => n.id === noteId);
+            if (!note) return;
+
+            const newExpense = {
+                id: 'G-' + Date.now().toString().slice(-5),
+                concept: `${note.item} (${note.store})`,
+                amount: note.price,
+                category: 'Otros',
+                date: new Date().toLocaleDateString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+            };
+
+            appData.expenses.unshift(newExpense);
+            saveToLocalStorage();
+            renderExpenses();
+            switchTab('tab-gastos');
+        }
+
+        // --- DASHBOARD DE UTILIDAD ---
+        function renderDashboard() {
+            const totalSales = (appData.sales || []).reduce((sum, s) => sum + s.total, 0);
+            const totalExpenses = (appData.expenses || []).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+            const netProfit = totalSales - totalExpenses;
+
+            document.getElementById('totalSalesVal').innerText = `$${totalSales.toFixed(2)}`;
+            document.getElementById('totalExpensesVal').innerText = `$${totalExpenses.toFixed(2)}`;
+            
+            const netProfitEl = document.getElementById('netProfitVal');
+            netProfitEl.innerText = `$${netProfit.toFixed(2)}`;
+            if (netProfit < 0) {
+                netProfitEl.className = "text-xs font-black text-red-400";
+            } else {
+                netProfitEl.className = "text-xs font-black text-amber-400";
+            }
+
+            renderSalesHistory();
+            updateChart(totalSales, totalExpenses);
+        }
+
+        function renderSalesHistory() {
+            const list = document.getElementById('salesHistoryList');
+            const tag = document.getElementById('salesCountTag');
+            if (!list) return;
+            list.innerHTML = '';
+
+            if (tag) tag.innerText = `${appData.sales.length} ventas`;
+
+            if (appData.sales.length === 0) {
+                list.innerHTML = `<p class="text-stone-500 text-xs text-center py-3">Sin ventas registradas en esta semana.</p>`;
+                return;
+            }
+
+            appData.sales.forEach(s => {
+                const item = document.createElement('div');
+                item.className = "bg-stone-950 p-2 rounded-xl border border-stone-800 flex justify-between items-center";
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-stone-200 block">${s.items.length} pzas • ${s.method}</span>
+                        <span class="text-[10px] text-stone-500">${s.date}</span>
+                    </div>
+                    <span class="font-extrabold text-emerald-400">+$${s.total.toFixed(2)}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('financialChart');
+            if (!ctx) return;
+
+            financialChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ventas Totales', 'Gastos Insumos'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#f59e0b', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#a8a29e', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(sales, expenses) {
+            if (financialChartInstance) {
+                financialChartInstance.data.datasets[0].data = [sales, expenses];
+                financialChartInstance.update();
+            }
+        }
+
+        function resetWeekModal() {
+            if (confirm('¿Estás seguro de reiniciar la semana? Se archivarán las ventas y gastos actuales.')) {
+                appData.currentWeek++;
+                appData.sales = [];
+                appData.expenses = [];
+                saveToLocalStorage();
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
